@@ -3,6 +3,8 @@
 # swaps contents of subtree of a svn working copy $dst with the contents of $src,
 # without getting .svn directory mayhem and svn throwing all kinds of errors at you
 
+# dependencies: svn, rsync, findutils, awk, ifne from moreutils
+
 src=$1
 dst=$2
 
@@ -22,5 +24,9 @@ done
 # copy all new files and directories into dst, leaving .svn directories in dst untouched
 rsync -a $src $dst
 
-echo "should be ready for commit."
+echo "svn adding new files/dirs, svn rm'ing removed files/dirs"
+svn status $dst | awk '/^?/ {print $2}' | ifne xargs svn add
+svn status $dst | awk '/^!/ {print $2}' | ifne xargs svn rm
+echo "should be ready for commit:"
+echo "svn status $dst"
 svn status $dst
