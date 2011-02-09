@@ -13,24 +13,26 @@ dst=$2
 [ -n "$dst" -a -d "$dst" ] || die_error '$2: dst dir'
 
 # remove everything but the directory structure with .svn directories and files in it in dst.
-find $dst -type f | grep -v '\.svn' | xargs rm
-# svn rm directories in dst which are not in the src dir
-for dir_dst in `find $dst -type d | grep -v '\.svn'`; do
+find "$dst" -name .svn -prune -o \( -type f -print0 \) | xargs -0 rm
+# svn rm non-svn directories in dst which are not in the src dir
+while read -d $'\0' dir_dst; do
 	dir_src=${dir_dst/$dst/$src}
-	if [ -d $dir_src ]; then
+	if [ -d "$dir_src" ]; then
 		#echo "$dir_src exists. not doing anything"
 		true
 	else
 		echo "$dir_src does not exist. removing $dir_dst"
-		svn rm $dir_dst
+		svn rm "$dir_dst"
 	fi
-done
+done < <(find "$dst" -name .svn -prune -o \( -type d -print0 \))
 # copy all new files and directories into dst, leaving .svn directories in dst untouched
-rsync -a $src $dst
+rsync -a "$src/" "$dst/"
 
 echo "svn adding new files/dirs, svn rm'ing removed files/dirs"
-svn status $dst | awk '/^?/ {print $2}' | ifne xargs svn add
-svn status $dst | awk '/^!/ {print $2}' | ifne xargs svn rm
+# all lines not matching ^\? or ^\! get stripped, then we strip everything but the actual filename
+# supports whitespace in filenames, but not newlines
+svn status "$dst" | sed '/^\?/!d;s/^\?[ \t]*//' | ifne xargs -d '\n' svn add
+svn status "$dst" | sed '/^\!/!d;s/^![ \t]*//' | ifne xargs -d '\n' svn rm
 echo "should be ready for commit:"
 echo "svn status $dst"
-svn status $dst
+svn status "$dst"
