@@ -3,10 +3,14 @@
 # swaps contents of subtree of a svn working copy $dst with the contents of $src,
 # without getting .svn directory mayhem and svn throwing all kinds of errors at you
 
-# dependencies: svn, rsync, findutils, awk, ifne from moreutils
+# dependencies: svn, rsync, findutils, awk, ifne from moreutils, libui-sh
+source /usr/lib/libui.sh
 
 src=$1
 dst=$2
+
+[ -n "$src" -a -d "$src" ] || die_error '$1: src dir'
+[ -n "$dst" -a -d "$dst" ] || die_error '$2: dst dir'
 
 # remove everything but the directory structure with .svn directories and files in it in dst.
 find $dst -type f | grep -v '\.svn' | xargs rm
